@@ -3,9 +3,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import sys
-import pprint
 import copy
-import functools
 
 
 class Sudoku(QWidget):
@@ -304,7 +302,7 @@ sample = (
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    # Создаем новый интерфейс для работы с игровым полем 3x3
+    # Создаем новый интерфейс для работы с игровым полем 9x9
     sudoku = Sudoku(3)
     # Устанавливаем начальное состояние игрового поля
     sudoku.set_game_board(sample)
