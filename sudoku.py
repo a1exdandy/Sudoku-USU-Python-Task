@@ -6,128 +6,234 @@ import sys
 import pprint
 import copy
 
-class Sudoku(QWidget):
 
-    def __init__(self):
+class Sudoku(QWidget):
+    """Основной класс программы. реализцющий интерфейс пользователя.
+    Содержит статические методы для работы с задачами-судоку (проверка
+    корректности поля, метод для поиска решения и т.д.).
+    """
+
+    def __init__(self, size):
+        """Конструктор класса Sudoku, производит построение интерфейса
+        для работы с игровым полем размера size ^ 2 на size ^ 2
+        """
+        # Инициализация подкласса QWidget
         super().__init__()
-        self.check_trivial_steps = True
+        self.size = size
+        # n - это размер поля, а также максимальное возможное число в
+        # в клетке поля. Определяется в этом месте для более понятного
+        # и простого кода далее
+        n = size ** 2
+        # fields - двумерный массив, который будет заполнен текстовыми
+        # полями для редактирования игрового поля Судоку
         self.fields = []
-        self.setFixedSize(270 + 20, 300 + 20)
-        for i in range(9):
+        # Вычисление ширины окна. Каждое текстовое поле будет иметь
+        # ширину 30пикс. Также учитывается разрыв (10пикс) между блоками
+        # размера size на size. (Их ровно size - 1)
+        width = n * 30 + (size - 1) * 10
+        # Высота вычисляется аналогично, но с учетом дополнительного
+        # места для кнопок управления
+        height = n * 30 + (size - 1) * 10 + 30
+        # Заполняем двумерный массив ссылками на текстовые поля
+        for i in range(n):
             self.fields.append([])
-            for j in range(9):
+            for j in range(n):
                 self.fields[i].append(QLineEdit(self))
+                # Прибавка i // size * 10 и j // size * 10 нужны для
+                # создания отступа между блоками размера size на size
                 self.fields[i][j].setGeometry(
-                    i // 3 * 10 + 30 * i, j // 3 * 10 + 30 * j, 30, 30
+                    i // size * 10 + 30 * i,
+                    j // size * 10 + 30 * j,
+                    30, 30
                 )
+        # clear_btn - кнопка для отчистки игрового поля Судоку
         self.clear_btn = QPushButton('Clear', self)
-        self.clear_btn.setGeometry(0, 290, 145, 30)
+        self.clear_btn.setGeometry(0, height - 30, width // 2, 30)
         self.clear_btn.clicked.connect(self.clear_fields)
+        # solution_btn - кнопка для запуска процесса поиска
+        # решеня для задачи
         self.solution_btn = QPushButton('Get solution', self)
-        self.solution_btn.setGeometry(145, 290, 145, 30)
+        self.solution_btn.setGeometry(width // 2, height - 30, width // 2, 30)
         self.solution_btn.clicked.connect(self.find_solution)
 
     def clear_fields(self):
-        for i in range(9):
-            for j in range(9):
+        """Метод для отчистки текущего сотояния поля
+        """
+        n = self.size ** 2
+        for i in range(n):
+            for j in range(n):
                 self.fields[i][j].setText('')
 
     def find_solution(self):
+        """Метод, запускающий поиск решения для текущего состояния
+        ирового поля. Запускается при нажатии на кнопку Get Solution
+        """
+        # Получаем двумерный массив на основе текущего состояний
+        # текстовых полей
         gb = self.get_game_board()
+        # Проверка на корректность входных данных
         if not self.is_correct_board(gb):
             print('Incorrect game board')
             return
+        # Поиск решения. Если каким-то образом решение не было найдено,
+        # сообщаем это пользователю
         if not self.get_solution(gb):
             print('Solution not found')
             return
+        # Проверяем, действительно ли мы нашли решение
         if not self.is_solution(gb):
             raise Exception('Program find solution, but it isn\'t correct')
+        # Выводим решение на экран
         self.set_game_board(gb)
-        print('Successful')
 
     def get_solution(self, gb):
+        """Метод, выполняющий поиск решения поля, заданного двумерным
+        массивом gb.
+        Алгоритм поиска следующий:
+        1) Если решение уже найдено, возвращаем True
+        2) Получаем массив со всеми возможными ходами и ищем в нем
+           поле с минимальным колличеством доступных ходов.
+        3) Для каждого хода создаем копию игрового поля и рекурсивно
+           запускаем данный процесс для этой копии. Если для очередного
+           хода было найдено решение, копируем копию в исходной массив и
+           возвращаем True
+        """
 
+        # Проверяем, найденно ли уже решение
         if self.is_solution(gb):
             return True
 
+        # n - размер игрового поля и максимально число в клетке
+        n = self.size ** 2
+        # получаем массив доступных ходов для поля
+        # см. описание метода get_possible_steps(gb)
         possible_steps = self.get_possible_steps(gb)
-        min = 10
+
+        # Ищем клетку с минимальным количеством возможных ходов.
+        # Присваиваем переменно min заведомо такое значение,
+        # больше которого на поле нет (n + 1)
+        min = n + 1
+        # В min_coord будем запоминать найденное поле
         min_coord = (-1, -1)
-        for i in range(9):
-            for j in range(9):
+        for i in range(n):
+            for j in range(n):
+                # Не обновляем переменную min, если ходов в клетке (i, j)
+                # нет (пустой set, значение длины 0)
                 if possible_steps[i][j]:
                     if len(possible_steps[i][j]) < min:
                         min = len(possible_steps[i][j])
                         min_coord = (i, j)
 
-        if min == 10:
+        # Если доступных ходов небыло найдено, выходим
+        if min == n + 1:
             return False
 
+        # Начинаем перебирать возможные ходы.
         i, j = min_coord
         steps = possible_steps[i][j]
         for step in steps:
+            # Для очередного хода создаем копию исхоного игрового поля,
+            # чтобы его не портить
             gb_copy = copy.deepcopy(gb)
             gb_copy[i][j] = step
+            # Если решение было найдено, копируем его в исходной массив
+            # и возвращаем True
             if self.get_solution(gb_copy):
-                for i in range(9):
-                    for j in range(9):
+                for i in range(n):
+                    for j in range(n):
                         gb[i][j] = gb_copy[i][j]
                 return True
+        # Если решение не было найдено, возвращаем False
         return False
 
     def is_solution(self, gb):
-        for i in range(9):
-            for j in range(9):
+        """ Метод, проверяющий, является ли состояние игрового поля,
+        записанное в двкхмерном массиве gb решением.
+        """
+        # Будем считать состояние игрового поля решением, если
+        # все его ячейки отличны от нуля и поле заполнено корректно
+        n = self.size ** 2
+        for i in range(n):
+            for j in range(n):
                 if gb[i][j] == 0:
                     return False
+        # Проверка на корректность поля
         return self.is_correct_board(gb)
 
     def get_possible_steps(self, gb):
+        """ Метод, возвращающий двухмерный массив возможных ходов для
+        текущего состояния игрового поля gb в соответствии с правилами
+        Судоку: числа в строчках, в столбцах и в блоках размера
+        size на size не могут повторятся. Результат представляет собой
+        двухмерный массив, в i, j ячейке которого хранится множество
+        возможных ходов.
+        """
+        n = self.size ** 2
         possible_steps = []
-        for i in range(9):
+        # Изначално удем считать, что доступны абсолютно все ходы
+        # (от 1 до n в каждой ячейке). В дальнейщем будем вычеркивать
+        # недопустимые ходы.
+        for i in range(n):
             possible_steps.append([])
-            for j in range(9):
-                possible_steps[i].append(set(range(1, 10)))
-        for i in range(9):
-            for j in range(9):
+            for j in range(n):
+                possible_steps[i].append(set(range(1, n + 1)))
+        for i in range(n):
+            for j in range(n):
+                # Если ячейка i, j заполнена, счтаем, что для неё нет
+                # ходов (пустое множество)
                 if gb[i][j] != 0:
                     possible_steps[i][j] = set()
-                    for k in range(9):
+                    # После чего вычеркиваем число в текучей ячейки
+                    # из строки и столбца, в которой назодится ячйека,
+                    # а также из блока размера size на size, которому
+                    # ячейка принадлежит
+                    for k in range(n):
                         if gb[i][j] in possible_steps[i][k]:
                             possible_steps[i][k].remove(gb[i][j])
                         if gb[i][j] in possible_steps[k][j]:
                             possible_steps[k][j].remove(gb[i][j])
-                    row = i // 3
-                    col = j // 3
-                    for k in range(3):
-                        for l in range(3):
-                            x = row * 3 + k
-                            y = col * 3 + l
+                    # Вычисляем координаты блока
+                    row = i // self.size
+                    col = j // self.size
+                    for k in range(self.size):
+                        for l in range(self.size):
+                            # Вычисляем координаты ячейки в блоке
+                            x = row * self.size + k
+                            y = col * self.size + l
                             if gb[i][j] in possible_steps[x][y]:
                                 possible_steps[x][y].remove(gb[i][j])
-        for i in range(3):
-            for j in range(3):
+        # После всех проделанных действий считаем числа в каждом блоке,
+        # и если какое-то из них встречается в единственной ячейке,
+        # то в ней не может быть других ходовом, кромой этого числа.
+        for i in range(self.size):
+            for j in range(self.size):
                 digital_counter = {}
-                for k in range(1, 10):
+                for k in range(1, n + 1):
                     digital_counter[k] = []
-                for k in range(3):
-                    for l in range(3):
-                        x = i * 3 + k
-                        y = j * 3 + l
+                for k in range(self.size):
+                    for l in range(self.size):
+                        x = i * self.size + k
+                        y = j * self.size + l
                         for m in possible_steps[x][y]:
                             digital_counter[m].append((x, y))
-                for k in range(1, 10):
+                for k in range(1, n + 1):
                     if len(digital_counter[k]) == 1:
                         x, y = digital_counter[k][0]
                         possible_steps[x][y] = {k}
+        # Возвращаем результат
         return possible_steps
 
     def get_game_board(self):
+        """Метод возвращает двухмерный массив на основе ткущего состояния
+        текстовых полей.
+        """
+        n = self.size ** 2
         gb = []
-        for i in range(9):
+        for i in range(n):
             gb.append([])
-            for j in range(9):
+            for j in range(n):
                 val = self.fields[j][i].text()
+                # Будем считать пустую ячейку поля нулем (0)
                 try:
                     val = int(val)
                 except ValueError:
@@ -136,37 +242,48 @@ class Sudoku(QWidget):
         return gb
 
     def set_game_board(self, gb):
-        for i in range(9):
-            for j in range(9):
+        """Метод заполняет текстовые поля на основе данных из двумерного
+        масива, задающего состояние игрового поля.
+        """
+        n = self.size ** 2
+        for i in range(n):
+            for j in range(n):
                 if gb[j][i]:
                     self.fields[i][j].setText(str(gb[j][i]))
                 else:
                     self.fields[i][j].setText('')
 
     def is_correct_board(self, gb):
-        for i in range(9):
-            for j in range(9):
+        """Метод проверят, является ли состояние игрового поля, заданного
+        двухмерным массивом gb, корректным (на основе правил Судоку, см.
+        описание метода get_possible_steps(gb))
+        """
+        n = self.size ** 2
+        for i in range(n):
+            for j in range(n):
                 if gb[i][j] == 0:
                     continue
-                if not (1 <= gb[i][j] <= 9):
+                if not (1 <= gb[i][j] <= n):
                     return False
-                for k in range(9):
+                for k in range(n):
                     if k != j and gb[i][j] == gb[i][k]:
                         return False
                     if k != i and gb[i][j] == gb[k][j]:
                         return False
-                row = i // 3
-                col = j // 3
-                for k in range(3):
-                    for l in range(3):
-                        x = row * 3 + k
-                        y = col * 3 + l
-                        if x== i and y == j:
+                row = i // self.size
+                col = j // self.size
+                for k in range(self.size):
+                    for l in range(self.size):
+                        x = row * self.size + k
+                        y = col * self.size + l
+                        if x == i and y == j:
                             continue
                         if gb[x][y] == gb[i][j]:
                             return False
         return True
 
+# Набор из нескольких состояние игрового поля Судоку размера
+# 3 x 3 разной сложности
 easy1 = (
     (0, 9, 0, 1, 8, 0, 0, 0, 0),
     (6, 3, 2, 0, 7, 0, 0, 0, 1),
@@ -265,7 +382,9 @@ empty_board = (
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    sudoku = Sudoku()
+    # Создаем новый интерфейс для работы с игровым полем 3x3
+    sudoku = Sudoku(3)
+    # Устанавливаем начальное состояние игрового поля
     sudoku.set_game_board(hard3)
     sudoku.show()
     app.exec()
