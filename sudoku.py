@@ -225,6 +225,30 @@ class Sudoku(QWidget):
                     if len(digital_counter[k]) == 1:
                         x, y = digital_counter[k][0]
                         possible_steps[x][y] = {k}
+        # Тоже самое проделываем для строк и стлбцев
+        for i in range(n):
+            # Проверка для i-ой строки
+            digital_counter = {}
+            for j in range(1, n + 1):
+                digital_counter[j] = []
+            for j in range(n):
+                for k in possible_steps[i][j]:
+                    digital_counter[k].append((i, j))
+            for j in range(1, n + 1):
+                if len(digital_counter[j]) == 1:
+                    x, y = digital_counter[j][0]
+                    possible_steps[x][y] = {j}
+            # Проверка для i-ого столбца
+            digital_counter = {}
+            for j in range(1, n + 1):
+                digital_counter[j] = []
+            for j in range(n):
+                for k in possible_steps[j][i]:
+                    digital_counter[k].append((j, i))
+            for j in range(1, n + 1):
+                if len(digital_counter[j]) == 1:
+                    x, y = digital_counter[j][0]
+                    possible_steps[x][y] = {j}
         # Возвращаем результат
         return possible_steps
 
