@@ -64,7 +64,6 @@ class Sudoku(QMainWindow):
         about_action = QAction('About...', self)
         about_action.triggered.connect(self.show_about_message_box)
         help_menu.addAction(about_action)
-
         # Создаем центральный виджет, в котором будут находится
         # текстовые поля для редактирования и кнопки отчистки
         # и поиска решения
@@ -130,10 +129,9 @@ class Sudoku(QMainWindow):
         gb = []
         for i in range(n):
             gb.append([])
-            line = load_file.readline().split(' ')[:-1]
-            line = map(int, line)
-            for j in line:
-                gb[i].append(j)
+            line = load_file.readline().split(' ')
+            for j in range(n):
+                gb[i].append(int(line[j]))
         load_file.close()
         return gb
 
@@ -436,8 +434,8 @@ sample = (
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     # Создаем новый интерфейс для работы с игровым полем 9x9
-    sudoku = Sudoku(3)
+    sudoku = Sudoku(4)
     # Устанавливаем начальное состояние игрового поля
-    sudoku.set_game_board(sample)
+    # sudoku.set_game_board(sample)
     sudoku.show()
     app.exec()

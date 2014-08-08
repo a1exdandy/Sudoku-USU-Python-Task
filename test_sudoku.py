@@ -10,9 +10,7 @@ TESTDIR = 'tests'
 
 
 class SudokuTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.sudoku = Sudoku(3, False)
+    pass
 
 
 def gen_test(file_name):
@@ -25,8 +23,8 @@ def gen_test(file_name):
     gb = sudoku.load_gb_from_file(file_name)
 
     def test_func(self):
-        self.assertTrue(self.sudoku.get_solution(gb))
-        self.assertTrue(self.sudoku.is_solution(gb))
+        self.assertTrue(sudoku.get_solution(gb))
+        self.assertTrue(sudoku.is_solution(gb))
 
     return test_func
 
