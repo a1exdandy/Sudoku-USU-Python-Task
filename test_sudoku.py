@@ -3,142 +3,44 @@
 
 import unittest
 from sudoku import Sudoku
+from pathlib import Path
 
-# Набор из нескольких состояние игрового поля Судоку размера
-# 9 x 9 разной сложности
-easy1 = [
-    [0, 9, 0, 1, 8, 0, 0, 0, 0],
-    [6, 3, 2, 0, 7, 0, 0, 0, 1],
-    [8, 4, 1, 3, 0, 6, 0, 0, 2],
-    [7, 0, 3, 0, 6, 0, 0, 0, 0],
-    [2, 5, 8, 7, 0, 1, 6, 3, 9],
-    [0, 0, 0, 0, 5, 0, 8, 0, 7],
-    [1, 0, 0, 9, 0, 4, 2, 5, 8],
-    [3, 0, 0, 0, 1, 0, 7, 6, 4],
-    [0, 0, 0, 0, 2, 7, 0, 9, 0],
-]
 
-easy2 = [
-    [0, 8, 6, 0, 1, 0, 0, 0, 0],
-    [5, 0, 0, 0, 0, 0, 8, 7, 0],
-    [0, 0, 0, 0, 8, 5, 2, 0, 0],
-    [0, 1, 4, 9, 0, 0, 0, 0, 8],
-    [0, 2, 0, 0, 0, 0, 0, 0, 0],
-    [0, 9, 0, 6, 7, 0, 0, 5, 0],
-    [0, 0, 2, 5, 6, 0, 0, 0, 3],
-    [0, 0, 0, 7, 3, 4, 0, 0, 0],
-    [0, 6, 0, 0, 2, 0, 1, 0, 5],
-]
-
-wiki1 = [
-    [2, 0, 0, 0, 0, 5, 8, 9, 0],
-    [0, 6, 0, 0, 9, 0, 7, 1, 0],
-    [9, 0, 0, 7, 0, 0, 0, 0, 4],
-    [0, 0, 0, 0, 6, 0, 4, 5, 8],
-    [0, 0, 6, 0, 0, 0, 0, 0, 0],
-    [5, 9, 0, 0, 3, 0, 0, 0, 0],
-    [3, 0, 0, 0, 0, 8, 0, 0, 7],
-    [0, 4, 9, 0, 2, 0, 0, 8, 0],
-    [0, 8, 5, 1, 0, 0, 0, 0, 9],
-]
-
-wiki2 = [
-    [0, 4, 0, 0, 8, 0, 0, 0, 7],
-    [0, 0, 3, 7, 0, 2, 0, 0, 9],
-    [0, 0, 0, 6, 3, 5, 0, 0, 0],
-    [0, 7, 0, 0, 0, 0, 2, 0, 0],
-    [9, 1, 0, 0, 0, 0, 0, 3, 8],
-    [0, 0, 5, 0, 0, 0, 0, 7, 0],
-    [0, 0, 0, 1, 2, 7, 0, 0, 0],
-    [8, 0, 0, 4, 0, 3, 1, 0, 0],
-    [2, 0, 0, 0, 5, 0, 0, 6, 0],
-]
-
-hard1 = [
-    [0, 0, 5, 3, 0, 0, 0, 0, 0],
-    [8, 0, 0, 0, 0, 0, 0, 2, 0],
-    [0, 7, 0, 0, 1, 0, 5, 0, 0],
-    [4, 0, 0, 0, 0, 5, 3, 0, 0],
-    [0, 1, 0, 0, 7, 0, 0, 0, 6],
-    [0, 0, 3, 2, 0, 0, 0, 8, 0],
-    [0, 6, 0, 5, 0, 0, 0, 0, 9],
-    [0, 0, 4, 0, 0, 0, 0, 3, 0],
-    [0, 0, 0, 0, 0, 9, 7, 0, 0],
-]
-
-hard2 = [
-    [0, 0, 0, 0, 8, 3, 9, 0, 0],
-    [1, 0, 0, 0, 0, 0, 0, 3, 0],
-    [0, 0, 4, 0, 0, 0, 0, 7, 0],
-    [0, 4, 2, 0, 3, 0, 0, 0, 0],
-    [6, 0, 0, 0, 0, 0, 0, 0, 4],
-    [0, 0, 0, 0, 7, 0, 0, 1, 0],
-    [0, 2, 0, 0, 0, 0, 0, 0, 0],
-    [0, 8, 0, 0, 0, 9, 2, 0, 0],
-    [0, 0, 0, 2, 5, 0, 0, 0, 6],
-]
-
-hard3 = [
-    [8, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 3, 6, 0, 0, 0, 0, 0],
-    [0, 7, 0, 0, 9, 0, 2, 0, 0],
-    [0, 5, 0, 0, 0, 7, 0, 0, 0],
-    [0, 0, 0, 0, 4, 5, 7, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 3, 0],
-    [0, 0, 1, 0, 0, 0, 0, 6, 8],
-    [0, 0, 8, 5, 0, 0, 0, 1, 0],
-    [0, 9, 0, 0, 0, 0, 4, 0, 0],
-]
-
-empty_board = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-]
+TESTDIR = 'tests'
 
 
 class SudokuTestCase(unittest.TestCase):
 
-    def test_easy1(self):
-        sudoku = Sudoku(3, False)
-        sudoku.get_solution(easy1)
-        self.assertTrue(sudoku.is_solution(easy1))
+    def setUp(self):
+        self.sudoku = Sudoku(3, False)
 
-    def test_easy2(self):
-        sudoku = Sudoku(3, False)
-        sudoku.get_solution(easy2)
-        self.assertTrue(sudoku.is_solution(easy2))
 
-    def test_wiki1(self):
-        sudoku = Sudoku(3, False)
-        sudoku.get_solution(wiki1)
-        self.assertTrue(sudoku.is_solution(wiki1))
+def gen_test(file_name):
+    """Функция генерирует тест-case из файла
+    """
+    in_file = open(file_name)
+    size = int(in_file.readline())
+    in_file.close()
+    sudoku = Sudoku(size, False)
+    gb = sudoku.load_gb_from_file(file_name)
 
-    def test_wiki2(self):
-        sudoku = Sudoku(3, False)
-        sudoku.get_solution(wiki2)
-        self.assertTrue(sudoku.is_solution(wiki2))
+    def test_func(self):
+        self.assertTrue(self.sudoku.get_solution(gb))
+        self.assertTrue(self.sudoku.is_solution(gb))
 
-    def test_hard1(self):
-        sudoku = Sudoku(3, False)
-        sudoku.get_solution(hard1)
-        self.assertTrue(sudoku.is_solution(hard1))
+    return test_func
 
-    def test_hard2(self):
-        sudoku = Sudoku(3, False)
-        sudoku.get_solution(hard2)
-        self.assertTrue(sudoku.is_solution(hard2))
-
-    def test_hard3(self):
-        sudoku = Sudoku(3, False)
-        sudoku.get_solution(hard3)
-        self.assertTrue(sudoku.is_solution(hard3))
+# Перебираем все файлы в директории TESTDIR и для каждого
+# генерируем новый тест-case в классе юнит-теста
+path = Path(TESTDIR)
+for file in path.iterdir():
+    file_name = file.name
+    test_case_name = 'test_' + file_name.split('.')[0]
+    setattr(
+        SudokuTestCase,
+        test_case_name,
+        gen_test(TESTDIR + '/' + file_name)
+    )
 
 if __name__ == '__main__':
     unittest.main()
