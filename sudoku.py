@@ -434,8 +434,8 @@ sample = (
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     # Создаем новый интерфейс для работы с игровым полем 9x9
-    sudoku = Sudoku(4)
+    sudoku = Sudoku(3)
     # Устанавливаем начальное состояние игрового поля
-    # sudoku.set_game_board(sample)
+    sudoku.set_game_board(sample)
     sudoku.show()
     app.exec()
