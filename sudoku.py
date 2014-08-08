@@ -6,7 +6,7 @@ import sys
 import copy
 
 
-class Sudoku(QWidget):
+class Sudoku(QMainWindow):
     """Основной класс программы. реализцющий интерфейс пользователя.
     Содержит методы для работы с задачами-судоку (проверка
     корректности поля, метод для поиска решения и т.д.).
@@ -29,6 +29,46 @@ class Sudoku(QWidget):
             return
         # Инициализация подкласса QWidget
         super().__init__()
+        # Создаем меню для работы с файлами
+        file_menu = self.menuBar().addMenu('File')
+        # Загрузка
+        open_action = QAction('Open', self)
+        open_action.setShortcuts(QKeySequence.Open)
+        open_action.triggered.connect(self.load_gb_from_file)
+        file_menu.addAction(open_action)
+        # Сохранение
+        save_action = QAction('Save', self)
+        save_action.setShortcuts(QKeySequence.Save)
+        save_action.triggered.connect(self.save_gb_to_file)
+        file_menu.addAction(save_action)
+        # Выход
+        quit_action= QAction('Quit', self)
+        quit_action.setShortcuts(QKeySequence.Quit)
+        quit_action.triggered.connect(exit)
+        file_menu.addAction(quit_action)
+        # Создаем меню редактирования
+        edit_menu = self.menuBar().addMenu('Edit')
+        # Отмена
+        undo_action = QAction('Undo', self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        undo_action.triggered.connect(self.undo_last_change)
+        edit_menu.addAction(undo_action)
+        # "Отмена отмены" =D
+        redo_action = QAction('Redo', self)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        redo_action.triggered.connect(self.redo_last_change)
+        edit_menu.addAction(redo_action)
+        # Создаем меню справки
+        help_menu = self.menuBar().addMenu('Help')
+        # О программе
+        about_action = QAction('About...', self)
+        about_action.triggered.connect(self.show_about_message_box)
+        help_menu.addAction(about_action)
+
+        # Создаем центральный виджет, в котором будут находится
+        # текстовые поля для редактирования и кнопки отчистки
+        # и поиска решения
+        central_widget = QWidget(self)
         # fields - двумерный массив, который будет заполнен текстовыми
         # полями для редактирования игрового поля Судоку
         self.fields = []
@@ -39,11 +79,12 @@ class Sudoku(QWidget):
         # Высота вычисляется аналогично, но с учетом дополнительного
         # места для кнопок управления
         height = n * 30 + (size - 1) * 10 + 30
+        central_widget.setFixedSize(width, height)
         # Заполняем двумерный массив ссылками на текстовые поля
         for i in range(n):
             self.fields.append([])
             for j in range(n):
-                self.fields[i].append(QLineEdit(self))
+                self.fields[i].append(QLineEdit(central_widget))
                 # Прибавка i // size * 10 и j // size * 10 нужны для
                 # создания отступа между блоками размера size на size
                 self.fields[i][j].setGeometry(
@@ -52,14 +93,70 @@ class Sudoku(QWidget):
                     30, 30
                 )
         # clear_btn - кнопка для отчистки игрового поля Судоку
-        self.clear_btn = QPushButton('Clear', self)
+        self.clear_btn = QPushButton('Clear', central_widget)
         self.clear_btn.setGeometry(0, height - 30, width // 2, 30)
         self.clear_btn.clicked.connect(self.clear_fields)
         # solution_btn - кнопка для запуска процесса поиска
         # решеня для задачи
-        self.solution_btn = QPushButton('Get solution', self)
+        self.solution_btn = QPushButton('Get solution', central_widget)
         self.solution_btn.setGeometry(width // 2, height - 30, width // 2, 30)
         self.solution_btn.clicked.connect(self.find_solution)
+        # Назначем центральный виджет главному окну программы
+        self.setCentralWidget(central_widget)
+        self.layout().setSizeConstraint(QLayout.SetFixedSize)
+
+    def load_gb_from_file(self):
+        """Метод, загружающий состояние поля из файла
+        """
+        file_name, file_type = QFileDialog.getOpenFileName(
+            self,
+            'Load game board', '',
+            'Sudoku game board file (*.sudokugb)'
+        )
+        load_file = open(file_name, 'r')
+        size = int(load_file.readline())
+        if size != self.size:
+            print('Error size')
+            load_file.close()
+            return
+        n = size ** 2
+        gb = []
+        for i in range(n):
+            gb.append([])
+            line = load_file.readline().split(' ')[:-1]
+            line = map(int, line)
+            for j in line:
+                gb[i].append(j)
+        self.set_game_board(gb)
+        load_file.close()
+
+    def save_gb_to_file(self):
+        """Метод, сохраняющий текущее состояние поля в выбранный
+        пользователем файл
+        """
+        file_name, file_type = QFileDialog.getSaveFileName(
+            self,
+            'Save game board', '',
+            'Sudoku game board file (*.sudokugb)'
+        )
+        save_file = open(file_name, 'w')
+        save_file.write(str(self.size) + '\n')
+        gb = self.get_game_board()
+        n = self.size ** 2
+        for i in range(n):
+            for j in range(n):
+                save_file.write(str(gb[i][j]) + ' ')
+            save_file.write('\n')
+        save_file.close()
+
+    def undo_last_change(self):
+        pass
+
+    def redo_last_change(self):
+        pass
+
+    def show_about_message_box(self):
+        pass
 
     def clear_fields(self):
         """Метод для отчистки текущего сотояния поля
