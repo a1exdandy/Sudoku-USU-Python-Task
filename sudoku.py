@@ -42,7 +42,7 @@ class Sudoku(QMainWindow):
         save_action.triggered.connect(self.show_save_dialog)
         file_menu.addAction(save_action)
         # Выход
-        quit_action= QAction('Quit', self)
+        quit_action = QAction('Quit', self)
         quit_action.setShortcuts(QKeySequence.Quit)
         quit_action.triggered.connect(exit)
         file_menu.addAction(quit_action)
