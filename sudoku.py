@@ -34,12 +34,12 @@ class Sudoku(QMainWindow):
         # Загрузка
         open_action = QAction('Open', self)
         open_action.setShortcuts(QKeySequence.Open)
-        open_action.triggered.connect(self.load_gb_from_file)
+        open_action.triggered.connect(self.show_load_dialog)
         file_menu.addAction(open_action)
         # Сохранение
         save_action = QAction('Save', self)
         save_action.setShortcuts(QKeySequence.Save)
-        save_action.triggered.connect(self.save_gb_to_file)
+        save_action.triggered.connect(self.show_save_dialog)
         file_menu.addAction(save_action)
         # Выход
         quit_action= QAction('Quit', self)
@@ -105,14 +105,21 @@ class Sudoku(QMainWindow):
         self.setCentralWidget(central_widget)
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
-    def load_gb_from_file(self):
-        """Метод, загружающий состояние поля из файла
+    def show_load_dialog(self):
+        """Метод, предоставляющий диалог выбора файла для загрузки
+        состояния игрового поля.
         """
         file_name, file_type = QFileDialog.getOpenFileName(
             self,
             'Load game board', '',
             'Sudoku game board file (*.sudokugb)'
         )
+        gb = self.load_gb_from_file(file_name)
+        self.set_game_board(gb)
+
+    def load_gb_from_file(self, file_name):
+        """Метод, загружающий состояние поля из файла
+        """
         load_file = open(file_name, 'r')
         size = int(load_file.readline())
         if size != self.size:
@@ -127,21 +134,26 @@ class Sudoku(QMainWindow):
             line = map(int, line)
             for j in line:
                 gb[i].append(j)
-        self.set_game_board(gb)
         load_file.close()
+        return gb
 
-    def save_gb_to_file(self):
-        """Метод, сохраняющий текущее состояние поля в выбранный
-        пользователем файл
+    def show_save_dialog(self):
+        """Метод, предоставляющий диалог выбора файла для сохранения
+        состояния игрового поля.
         """
         file_name, file_type = QFileDialog.getSaveFileName(
             self,
             'Save game board', '',
             'Sudoku game board file (*.sudokugb)'
         )
+        gb = self.get_game_board()
+        self.save_gb_to_file(file_name, gb)
+
+    def save_gb_to_file(self, file_name, gb):
+        """Метод, сохраняющий текущее состояние поля в файле
+        """
         save_file = open(file_name, 'w')
         save_file.write(str(self.size) + '\n')
-        gb = self.get_game_board()
         n = self.size ** 2
         for i in range(n):
             for j in range(n):
