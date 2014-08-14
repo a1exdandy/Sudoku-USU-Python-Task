@@ -49,21 +49,23 @@ class Sudoku(QMainWindow):
         # Создаем меню редактирования
         edit_menu = self.menuBar().addMenu('Edit')
         # Отмена
-        undo_action = QAction('Undo', self)
-        undo_action.setShortcuts(QKeySequence.Undo)
-        undo_action.triggered.connect(self.undo_last_change)
-        edit_menu.addAction(undo_action)
-        # "Отмена отмены" =D
-        redo_action = QAction('Redo', self)
-        redo_action.setShortcuts(QKeySequence.Redo)
-        redo_action.triggered.connect(self.redo_last_change)
-        edit_menu.addAction(redo_action)
+        restore_action = QAction('Restore', self)
+        restore_action.setShortcuts(QKeySequence.Undo)
+        restore_action.triggered.connect(self.restore)
+        edit_menu.addAction(restore_action)
         # Создаем меню справки
         help_menu = self.menuBar().addMenu('Help')
         # О программе
+        # Создание диалогового окна "О программе"
+        self.about_msg = QMessageBox(self)
+        self.about_msg.setWindowTitle('Sudoku [USU Task]')
+        self.about_msg.setText('Тут будет много букаф')
         about_action = QAction('About...', self)
-        about_action.triggered.connect(self.show_about_message_box)
+        about_action.triggered.connect(self.about_msg.show)
         help_menu.addAction(about_action)
+        # Переменная с информацией для восстаовления исходного состояния
+        # поля после поиска решения
+        self.restore_data = None
         # Создаем центральный виджет, в котором будут находится
         # текстовые поля для редактирования и кнопки отчистки
         # и поиска решения
@@ -113,8 +115,10 @@ class Sudoku(QMainWindow):
             'Load game board', '',
             'Sudoku game board file (*.sudokugb)'
         )
-        gb = self.load_gb_from_file(file_name)
-        self.set_game_board(gb)
+        if file_name:
+            gb = self.load_gb_from_file(file_name)
+            if gb:
+                self.set_game_board(gb)
 
     def load_gb_from_file(self, file_name):
         """Метод, загружающий состояние поля из файла
@@ -144,8 +148,9 @@ class Sudoku(QMainWindow):
             'Save game board', '',
             'Sudoku game board file (*.sudokugb)'
         )
-        gb = self.get_game_board()
-        self.save_gb_to_file(file_name, gb)
+        if file_name:
+            gb = self.get_game_board()
+            self.save_gb_to_file(file_name, gb)
 
     def save_gb_to_file(self, file_name, gb):
         """Метод, сохраняющий текущее состояние поля в файле
@@ -159,18 +164,19 @@ class Sudoku(QMainWindow):
             save_file.write('\n')
         save_file.close()
 
-    def undo_last_change(self):
-        pass
-
-    def redo_last_change(self):
-        pass
-
-    def show_about_message_box(self):
-        pass
+    def restore(self):
+        """Метод для восстановления предыдущего состояния
+        (до нахождения решения или до вызова restore)
+        """
+        if self.restore_data:
+            gb = self.get_game_board()
+            self.set_game_board(self.restore_data)
+            self.restore_data = copy.deepcopy(gb)
 
     def clear_fields(self):
         """Метод для отчистки текущего сотояния поля
         """
+        self.push_change()
         n = self.size ** 2
         for i in range(n):
             for j in range(n):
@@ -187,6 +193,8 @@ class Sudoku(QMainWindow):
         if not self.is_correct_board(gb):
             print('Incorrect game board')
             return
+        # Сохранения исходного состояния поля
+        self.restore_data = copy.deepcopy(gb)
         # Поиск решения. Если каким-то образом решение не было найдено,
         # сообщаем это пользователю
         if not self.get_solution(gb):
@@ -195,7 +203,7 @@ class Sudoku(QMainWindow):
         # Проверяем, действительно ли мы нашли решение
         if not self.is_solution(gb):
             raise Exception('Program find solution, but it isn\'t correct')
-        # Выводим решение на экран
+        # Выводим решение на экран, запомнив перед этим предыдущее состояние
         self.set_game_board(gb)
 
     def get_solution(self, gb):
