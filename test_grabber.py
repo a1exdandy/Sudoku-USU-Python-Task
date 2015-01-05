@@ -9,7 +9,7 @@ visible_re = re.compile(
     r'<INPUT ID="editmask" TYPE=hidden VALUE="(\d+)">'
 )
 
-gb = [[0] * 9] * 9
+gb = [[0 for i in range(9)] for j in range(9)]
 
 game = sudoku.Sudoku(3, False)
 
@@ -20,9 +20,12 @@ for i in range(0, 100):
     digs = re.findall(digit_re, content)[0]
     visible = re.findall(visible_re, content)[0]
     for j in range(81):
+        x = j // 9
+        y = j - 9 * x
         if visible[j] == '0':
-            gb[j // 9][j % 9] = int(digs[j])
+            gb[x][y] = int(digs[j])
         else:
-            gb[j // 9][j % 9] = 0
-    print('websudoku_com_evil_' + str(i).zfill(3))
-    game.save_gb_to_file('tests/websudoku_com_hard_' + str(i).zfill(3), gb)
+            gb[x][y] = 0
+    file_name = 'websudoku_com_evil_{:03d}.sudokugb'.format(i)
+    print(file_name)
+    game.save_gb_to_file('tests_new/' + file_name, gb)
