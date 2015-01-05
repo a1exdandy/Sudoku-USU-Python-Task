@@ -1,9 +1,28 @@
-# author: Kovrizhnykh Alexey
+__author__ = 'Kovrizhnykh Alexey'
 
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
 import sys
 import copy
+import random
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, \
+    QAction, QWidget, QLineEdit, QPushButton, QLayout, QFileDialog
+
+
+README_TEXT = """<b>Sudoku v1.01</b><br>
+Программа для решения судоку.<br>
+Автор: Kovrizhnykh Alexey<br>
+Подробная информация в README.txt
+"""
+
+
+class SudokuException(Exception):
+
+    def __init__(self, msg, gb=None):
+        if gb:
+            msg += '\nGAME BOARD\n'
+            for line in gb:
+                msg += ' '.join(map(str, line)) + '\n'
+        super().__init__(msg)
 
 
 class Sudoku(QMainWindow):
@@ -19,6 +38,7 @@ class Sudoku(QMainWindow):
         работы
         """
         self.size = size
+        self.n = size ** 2
         # n - это размер поля, а также максимальное возможное число в
         # в клетке поля. Определяется в этом месте для более понятного
         # и простого кода далее
@@ -29,40 +49,15 @@ class Sudoku(QMainWindow):
             return
         # Инициализация подкласса QWidget
         super().__init__()
-        # Создаем меню для работы с файлами
-        file_menu = self.menuBar().addMenu('File')
-        # Загрузка
-        open_action = QAction('Open', self)
-        open_action.setShortcuts(QKeySequence.Open)
-        open_action.triggered.connect(self.show_load_dialog)
-        file_menu.addAction(open_action)
-        # Сохранение
-        save_action = QAction('Save', self)
-        save_action.setShortcuts(QKeySequence.Save)
-        save_action.triggered.connect(self.show_save_dialog)
-        file_menu.addAction(save_action)
-        # Выход
-        quit_action = QAction('Quit', self)
-        quit_action.setShortcuts(QKeySequence.Quit)
-        quit_action.triggered.connect(exit)
-        file_menu.addAction(quit_action)
-        # Создаем меню редактирования
-        edit_menu = self.menuBar().addMenu('Edit')
-        # Отмена
-        restore_action = QAction('Restore', self)
-        restore_action.setShortcuts(QKeySequence.Undo)
-        restore_action.triggered.connect(self.restore)
-        edit_menu.addAction(restore_action)
-        # Создаем меню справки
-        help_menu = self.menuBar().addMenu('Help')
-        # О программе
-        # Создание диалогового окна "О программе"
+
+        # Окно "о программе"
         self.about_msg = QMessageBox(self)
         self.about_msg.setWindowTitle('Sudoku [USU Task]')
-        self.about_msg.setText('Тут будет много букаф')
-        about_action = QAction('About...', self)
-        about_action.triggered.connect(self.about_msg.show)
-        help_menu.addAction(about_action)
+        self.about_msg.setText(README_TEXT)
+
+        # Создаем меню
+        self.menu_init()
+
         # Переменная с информацией для восстаовления исходного состояния
         # поля после поиска решения
         self.restore_data = None
@@ -106,6 +101,39 @@ class Sudoku(QMainWindow):
         self.setCentralWidget(central_widget)
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
+    def menu_init(self):
+        # Создаем меню для работы с файлами
+        file_menu = self.menuBar().addMenu('File')
+        # Загрузка
+        self.menu_add_option(
+            file_menu, 'Open', self.show_load_dialog, QKeySequence.Open
+        )
+        # Сохранение
+        self.menu_add_option(
+            file_menu, 'Save', self.show_save_dialog, QKeySequence.Save
+        )
+        # Выход
+        self.menu_add_option(
+            file_menu, 'Quit', exit, QKeySequence.Quit
+        )
+        # Создаем меню редактирования
+        edit_menu = self.menuBar().addMenu('Edit')
+        # Отмена
+        self.menu_add_option(
+            edit_menu, 'Restore', self.restore, QKeySequence.Undo
+        )
+        # Создаем меню справки
+        help_menu = self.menuBar().addMenu('Help')
+        # О программе
+        self.menu_add_option(help_menu, 'About...', self.about_msg.show)
+
+    def menu_add_option(self, menu, name, handler, hot_key=None):
+        action = QAction(name, self)
+        if hot_key:
+            action.setShortcuts(hot_key)
+        action.triggered.connect(handler)
+        menu.addAction(action)
+
     def show_load_dialog(self):
         """Метод, предоставляющий диалог выбора файла для загрузки
         состояния игрового поля.
@@ -130,12 +158,7 @@ class Sudoku(QMainWindow):
             load_file.close()
             return
         n = size ** 2
-        gb = []
-        for i in range(n):
-            gb.append([])
-            line = load_file.readline().split(' ')
-            for j in range(n):
-                gb[i].append(int(line[j]))
+        gb = [list(map(int, line.split())) for line in load_file]
         load_file.close()
         return gb
 
@@ -157,11 +180,8 @@ class Sudoku(QMainWindow):
         """
         save_file = open(file_name, 'w')
         save_file.write(str(self.size) + '\n')
-        n = self.size ** 2
-        for i in range(n):
-            for j in range(n):
-                save_file.write(str(gb[i][j]) + ' ')
-            save_file.write('\n')
+        for i in range(self.n):
+            save_file.write(' '.join(map(str, gb[i])) + '\n')
         save_file.close()
 
     def restore(self):
@@ -176,10 +196,10 @@ class Sudoku(QMainWindow):
     def clear_fields(self):
         """Метод для отчистки текущего сотояния поля
         """
-        self.push_change()
-        n = self.size ** 2
-        for i in range(n):
-            for j in range(n):
+        gb = self.get_game_board()
+        self.restore_data = copy.deepcopy(gb)
+        for i in range(self.n):
+            for j in range(self.n):
                 self.fields[i][j].setText('')
 
     def find_solution(self):
@@ -202,7 +222,9 @@ class Sudoku(QMainWindow):
             return
         # Проверяем, действительно ли мы нашли решение
         if not self.is_solution(gb):
-            raise Exception('Program find solution, but it isn\'t correct')
+            raise SudokuException(
+                'Program find solution, but it isn\'t correct', gb
+            )
         # Выводим решение на экран, запомнив перед этим предыдущее состояние
         self.set_game_board(gb)
 
@@ -214,6 +236,7 @@ class Sudoku(QMainWindow):
         2) Получаем массив со всеми возможными ходами и ищем в нем
            поле с минимальным колличеством доступных ходов.
         3) Для каждого хода создаем копию игрового поля и рекурсивно
+
            запускаем данный процесс для этой копии. Если для очередного
            хода было найдено решение, копируем копию в исходной массив и
            возвращаем True
@@ -223,8 +246,6 @@ class Sudoku(QMainWindow):
         if self.is_solution(gb):
             return True
 
-        # n - размер игрового поля и максимально число в клетке
-        n = self.size ** 2
         # получаем массив доступных ходов для поля
         # см. описание метода get_possible_steps(gb)
         possible_steps = self.get_possible_steps(gb)
@@ -232,25 +253,26 @@ class Sudoku(QMainWindow):
         # Ищем клетку с минимальным количеством возможных ходов.
         # Присваиваем переменно min заведомо такое значение,
         # больше которого на поле нет (n + 1)
-        min = n + 1
+        min_steps = self.n + 1
         # В min_coord будем запоминать найденное поле
         min_coord = (-1, -1)
-        for i in range(n):
-            for j in range(n):
+        for i in range(self.n):
+            for j in range(self.n):
                 # Не обновляем переменную min, если ходов в клетке (i, j)
                 # нет (пустой set, значение длины 0)
                 if possible_steps[i][j]:
-                    if len(possible_steps[i][j]) < min:
-                        min = len(possible_steps[i][j])
+                    if len(possible_steps[i][j]) < min_steps:
+                        min_steps = len(possible_steps[i][j])
                         min_coord = (i, j)
 
         # Если доступных ходов небыло найдено, выходим
-        if min == n + 1:
+        if min_steps == self.n + 1:
             return False
 
         # Начинаем перебирать возможные ходы.
         i, j = min_coord
-        steps = possible_steps[i][j]
+        steps = list(possible_steps[i][j])
+        random.shuffle(steps)
         for step in steps:
             # Для очередного хода создаем копию исхоного игрового поля,
             # чтобы его не портить
@@ -259,8 +281,8 @@ class Sudoku(QMainWindow):
             # Если решение было найдено, копируем его в исходной массив
             # и возвращаем True
             if self.get_solution(gb_copy):
-                for i in range(n):
-                    for j in range(n):
+                for i in range(self.n):
+                    for j in range(self.n):
                         gb[i][j] = gb_copy[i][j]
                 return True
         # Если решение не было найдено, возвращаем False
@@ -272,9 +294,8 @@ class Sudoku(QMainWindow):
         """
         # Будем считать состояние игрового поля решением, если
         # все его ячейки отличны от нуля и поле заполнено корректно
-        n = self.size ** 2
-        for i in range(n):
-            for j in range(n):
+        for i in range(self.n):
+            for j in range(self.n):
                 if gb[i][j] == 0:
                     return False
         # Проверка на корректность поля
@@ -288,17 +309,18 @@ class Sudoku(QMainWindow):
         двухмерный массив, в i, j ячейке которого хранится множество
         возможных ходов.
         """
-        n = self.size ** 2
-        possible_steps = []
+
         # Изначално удем считать, что доступны абсолютно все ходы
         # (от 1 до n в каждой ячейке). В дальнейщем будем вычеркивать
         # недопустимые ходы.
-        for i in range(n):
+        possible_steps = []
+        for i in range(self.n):
             possible_steps.append([])
-            for j in range(n):
-                possible_steps[i].append(set(range(1, n + 1)))
-        for i in range(n):
-            for j in range(n):
+            for j in range(self.n):
+                possible_steps[i].append(set(range(1, self.n + 1)))
+
+        for i in range(self.n):
+            for j in range(self.n):
                 # Если ячейка i, j заполнена, счтаем, что для неё нет
                 # ходов (пустое множество)
                 if gb[i][j] != 0:
@@ -307,7 +329,7 @@ class Sudoku(QMainWindow):
                     # из строки и столбца, в которой назодится ячйека,
                     # а также из блока размера size на size, которому
                     # ячейка принадлежит
-                    for k in range(n):
+                    for k in range(self.n):
                         if gb[i][j] in possible_steps[i][k]:
                             possible_steps[i][k].remove(gb[i][j])
                         if gb[i][j] in possible_steps[k][j]:
@@ -328,7 +350,7 @@ class Sudoku(QMainWindow):
         for i in range(self.size):
             for j in range(self.size):
                 digital_counter = {}
-                for k in range(1, n + 1):
+                for k in range(1, self.n + 1):
                     digital_counter[k] = []
                 for k in range(self.size):
                     for l in range(self.size):
@@ -336,31 +358,31 @@ class Sudoku(QMainWindow):
                         y = j * self.size + l
                         for m in possible_steps[x][y]:
                             digital_counter[m].append((x, y))
-                for k in range(1, n + 1):
+                for k in range(1, self.n + 1):
                     if len(digital_counter[k]) == 1:
                         x, y = digital_counter[k][0]
                         possible_steps[x][y] = {k}
         # Тоже самое проделываем для строк и стлбцев
-        for i in range(n):
+        for i in range(self.n):
             # Проверка для i-ой строки
             digital_counter = {}
-            for j in range(1, n + 1):
+            for j in range(1, self.n + 1):
                 digital_counter[j] = []
-            for j in range(n):
+            for j in range(self.n):
                 for k in possible_steps[i][j]:
                     digital_counter[k].append((i, j))
-            for j in range(1, n + 1):
+            for j in range(1, self.n + 1):
                 if len(digital_counter[j]) == 1:
                     x, y = digital_counter[j][0]
                     possible_steps[x][y] = {j}
             # Проверка для i-ого столбца
             digital_counter = {}
-            for j in range(1, n + 1):
+            for j in range(1, self.n + 1):
                 digital_counter[j] = []
-            for j in range(n):
+            for j in range(self.n):
                 for k in possible_steps[j][i]:
                     digital_counter[k].append((j, i))
-            for j in range(1, n + 1):
+            for j in range(1, self.n + 1):
                 if len(digital_counter[j]) == 1:
                     x, y = digital_counter[j][0]
                     possible_steps[x][y] = {j}
@@ -371,11 +393,10 @@ class Sudoku(QMainWindow):
         """Метод возвращает двухмерный массив на основе ткущего состояния
         текстовых полей.
         """
-        n = self.size ** 2
         gb = []
-        for i in range(n):
+        for i in range(self.n):
             gb.append([])
-            for j in range(n):
+            for j in range(self.n):
                 val = self.fields[j][i].text()
                 # Будем считать пустую ячейку поля нулем (0)
                 try:
@@ -389,9 +410,8 @@ class Sudoku(QMainWindow):
         """Метод заполняет текстовые поля на основе данных из двумерного
         масива, задающего состояние игрового поля.
         """
-        n = self.size ** 2
-        for i in range(n):
-            for j in range(n):
+        for i in range(self.n):
+            for j in range(self.n):
                 if gb[j][i]:
                     self.fields[i][j].setText(str(gb[j][i]))
                 else:
@@ -402,14 +422,13 @@ class Sudoku(QMainWindow):
         двухмерным массивом gb, корректным (на основе правил Судоку, см.
         описание метода get_possible_steps(gb))
         """
-        n = self.size ** 2
-        for i in range(n):
-            for j in range(n):
+        for i in range(self.n):
+            for j in range(self.n):
                 if gb[i][j] == 0:
                     continue
-                if not (1 <= gb[i][j] <= n):
+                if not (1 <= gb[i][j] <= self.n):
                     return False
-                for k in range(n):
+                for k in range(self.n):
                     if k != j and gb[i][j] == gb[i][k]:
                         return False
                     if k != i and gb[i][j] == gb[k][j]:

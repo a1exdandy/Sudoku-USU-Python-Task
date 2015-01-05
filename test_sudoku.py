@@ -1,5 +1,7 @@
-# Author: Kovrizhnykh Alexey
+__author__ = 'Kovrizhnykh Alexey'
 # Тестовый модуль для Sudoku
+
+import os
 
 import unittest
 from sudoku import Sudoku
@@ -11,6 +13,7 @@ TESTDIR = 'tests'
 
 class SudokuTestCase(unittest.TestCase):
     pass
+    # Сами тест-функции генерируются ниже
 
 
 def gen_test(file_name):
