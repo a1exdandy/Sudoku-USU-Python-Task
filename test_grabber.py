@@ -9,7 +9,7 @@ visible_re = re.compile(
     r'<INPUT ID="editmask" TYPE=hidden VALUE="(\d+)">'
 )
 
-gb = [[0 for i in range(9)] for j in range(9)]
+gb = [[0] * 9 for j in range(9)]
 
 game = sudoku.Sudoku(3, False)
 
